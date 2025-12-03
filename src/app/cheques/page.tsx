@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Table } from "@/components/ui/Table";
-import { Plus, Download, Eye } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 
 export default function ChequeServicesPage() {
   const cheques = [

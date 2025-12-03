@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "./api-client";
 import {
   mockCardsData,
   mockTransactionsData,
@@ -89,7 +88,6 @@ export function useApproveCard() {
     mutationFn: async ({
       cardId,
       role,
-      otp,
     }: {
       cardId: string;
       role: "ceo" | "cfo";

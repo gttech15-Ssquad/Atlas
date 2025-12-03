@@ -3,9 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
 import { SIDEBAR_ITEMS } from "@/lib/constants";
-import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 
