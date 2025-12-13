@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { apiClient } from "@/lib/api-client";
 
 // Helper function to set auth cookie
 const setAuthCookie = (token: string) => {
@@ -21,6 +22,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  firstName: string;
+  lastName: string;
   role: Role;
   department?: string;
   status: "active" | "inactive";
@@ -31,11 +34,13 @@ export interface User {
 export interface AuthState {
   user: User | null;
   token: string | null;
+  organizationId: string | null;
   isAuthenticated: boolean;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
+  setOrganizationId: (orgId: string | null) => void;
   logout: () => void;
-  login: (email: string) => Promise<void>;
+  login: (email: string, password?: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -43,46 +48,73 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
+      organizationId: null,
       isAuthenticated: false,
       setUser: (user) => set({ user, isAuthenticated: !!user }),
       setToken: (token) => set({ token }),
+      setOrganizationId: (orgId) => set({ organizationId: orgId }),
       logout: () => {
         clearAuthCookie();
-        set({ user: null, token: null, isAuthenticated: false });
+        if (typeof localStorage !== "undefined") {
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("organization_id");
+        }
+        set({
+          user: null,
+          token: null,
+          organizationId: null,
+          isAuthenticated: false,
+        });
       },
-      login: async (email) => {
-        // Mock login with a small delay to simulate API call
-        return new Promise<void>((resolve) => {
-          setTimeout(() => {
-            // Map demo emails to full names
-            const nameMap: Record<string, string> = {
-              "ceo@gtbank.com": "Chioma Okafor",
-              "cfo@gtbank.com": "Emeka Nwosu",
-              "admin@gtbank.com": "Adekunle Adeyemi",
-              "head@gtbank.com": "Ngozi Okoro",
-              "auditor@gtbank.com": "Tunde Olanrewaju",
-            };
+      login: async (email: string, password?: string) => {
+        try {
+          const res = await apiClient.login(email, password ?? "");
 
-            const mockUser: User = {
-              id: "1",
-              email,
-              name: nameMap[email] || "Administrator",
-              role: "CEO",
-              department: "Finance",
-              status: "active",
-              lastLogin: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
-            };
-            const token = "mock-token-" + Date.now();
+          console.log(res);
+          const data = res.data;
+          console.log(data);
+
+          const token = data?.token ?? data?.jwt ?? null;
+          const firstuser = data?.user ?? data?.profile ?? null;
+          const user = {
+            ...firstuser,
+            name: `${firstuser.firstName} ${firstuser.lastName}`,
+          };
+
+          const orgId =
+            data?.organizationId ??
+            data?.OrganizationId ??
+            data?.organizationId ??
+            null;
+          if (token) {
             setAuthCookie(token);
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem("auth_token", token);
+              if (orgId) localStorage.setItem("organization_id", orgId);
+            }
             set({
-              user: mockUser,
+              user,
               token,
+              organizationId: orgId ?? null,
               isAuthenticated: true,
             });
-            resolve();
-          }, 500);
-        });
+            return;
+          }
+          throw new Error("Invalid login response");
+        } catch (err) {
+          clearAuthCookie();
+          if (typeof localStorage !== "undefined") {
+            localStorage.removeItem("auth_token");
+            localStorage.removeItem("organization_id");
+          }
+          set({
+            user: null,
+            token: null,
+            organizationId: null,
+            isAuthenticated: false,
+          });
+          throw err;
+        }
       },
     }),
     {

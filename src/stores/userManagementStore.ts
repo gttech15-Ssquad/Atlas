@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { User, Role } from "./authStore";
+import { User, Role } from "@/store/authStore";
 
 export interface UserManagementStore {
   users: User[];

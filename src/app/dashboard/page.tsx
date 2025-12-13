@@ -16,23 +16,50 @@ import {
   Plus,
 } from "lucide-react";
 import Link from "next/link";
-import { mockDashboardData, mockChartData } from "@/lib/mock-data";
+import { useDashboardSummary, useRecentTransactions } from "@/lib/hooks";
 import { formatCurrency } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { instance } from "@/lib/utils/axios";
+import { endpoints } from "@/lib/api/endpoints";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuthStore();
   const [mounted, setMounted] = React.useState(false);
+  const { data: summary } = useDashboardSummary();
+  const { data: recentTx = [] } = useRecentTransactions({ pageSize: 5 });
+
+  const {
+    data: cardres,
+    isFetching: isFetchingCards,
+    refetch,
+  } = useQuery({
+    queryFn: () => instance.get(`${endpoints().cards.getAllCards}`),
+    queryKey: ["cards"],
+  });
+  console.log(cardres?.data);
+  console.log(user);
+  console.log(user);
+
+  const totalCards = cardres?.data?.total;
+
+  const activeCardsCount = cardres?.data?.items.filter(
+    (card: { status: string }) => card.status === "Active"
+  ).length;
+
+  console.log(totalCards);
+  console.log(activeCardsCount);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, router, mounted]);
+  // useEffect(() => {
+  //   if (mounted && !isAuthenticated) {
+  //     router.push("/login");
+  //   }
+  // }, [isAuthenticated, router, mounted]);
 
   // Don't render until mounted to avoid hydration mismatch
   if (!mounted || !isAuthenticated) {
@@ -42,40 +69,46 @@ export default function DashboardPage() {
   const stats = [
     {
       title: "Account Balance",
-      value: formatCurrency(mockDashboardData.totalBalance),
+      value: formatCurrency(
+        summary?.availableBalance ?? summary?.available ?? 0
+      ),
       icon: <TrendingUp className="text-primary" size={24} />,
       trend: "up" as const,
-      trendLabel: "+2.5% from last month",
+      trendLabel: "+—",
     },
     {
       title: "Virtual Cards",
-      value: mockDashboardData.cardCount,
+      value: totalCards ?? "—",
       icon: <CreditCard className="text-info" size={24} />,
       trend: null,
-      trendLabel: `${mockDashboardData.activeCards} Active`,
+      trendLabel: `${activeCardsCount ?? "—"} Active`,
     },
     {
       title: "Monthly Spending",
-      value: formatCurrency(mockDashboardData.monthlySpend),
+      value: formatCurrency(summary?.monthlySpend ?? 0),
       icon: <ArrowUpRight className="text-warning" size={24} />,
       trend: "up" as const,
-      trendLabel: `${Math.round((mockDashboardData.monthlySpend / mockDashboardData.monthlyLimit) * 100)}% of limit`,
+      trendLabel: `${summary?.monthlyPercent ?? "—"}% of limit`,
     },
     {
       title: "Team Members",
-      value: "12",
+      value: "—",
       icon: <Users className="text-success" size={24} />,
       trend: null,
-      trendLabel: "4 pending approvals",
+      trendLabel: "—",
     },
   ];
+
+  if (isFetchingCards) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold text-neutral-900">
-          Welcome back, {user?.name}!
+          Welcome back, {user?.firstName}!
         </h1>
         <p className="text-neutral-600">
           {user?.role === "CEO" &&
@@ -93,7 +126,7 @@ export default function DashboardPage() {
 
       {/* Alerts */}
       <div className="space-y-3">
-        {mockDashboardData.alerts.map((alert) => (
+        {(summary?.alerts ?? []).map((alert: any) => (
           <Alert
             key={alert.id}
             type={alert.type as any}
@@ -121,7 +154,31 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Spending Chart */}
         <div className="lg:col-span-2">
-          <SpendingChart data={mockChartData} />
+          <SpendingChart
+            data={
+              /* derive simple monthly buckets from recent transactions if available */
+              ((): any[] => {
+                if (!recentTx || recentTx.length === 0) return [];
+                // Aggregate by month label
+                const map = new Map<
+                  string,
+                  { month: string; spend: number; limit: number }
+                >();
+                recentTx.forEach((t: any) => {
+                  const d = new Date(t.date || t.createdAt || t.timestamp);
+                  const month = d.toLocaleString(undefined, { month: "short" });
+                  const entry = map.get(month) ?? {
+                    month,
+                    spend: 0,
+                    limit: summary?.monthlyLimit ?? 0,
+                  };
+                  entry.spend += Math.abs(t.amount ?? t.value ?? 0);
+                  map.set(month, entry);
+                });
+                return Array.from(map.values()).slice(0, 12);
+              })()
+            }
+          />
         </div>
 
         {/* Quick Actions */}
@@ -175,27 +232,49 @@ export default function DashboardPage() {
           </CardHeader>
           <CardBody className="space-y-0">
             <div className="divide-y divide-neutral-200">
-              {mockDashboardData.transactions.map((tx) => (
-                <div
-                  key={tx.id}
-                  className="py-4 first:pt-0 last:pb-0 flex items-center justify-between hover:bg-neutral-50 px-0"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-900">
-                      {tx.description}
-                    </p>
-                    <p className="text-xs text-neutral-500 mt-1">
-                      {new Date(tx.date).toLocaleDateString()}
-                    </p>
+              {recentTx.map(
+                (tx: {
+                  id: React.Key | null | undefined;
+                  description: any;
+                  date: any;
+                  createdAt: any;
+                  amount: number;
+                  status:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | React.ReactElement<
+                        any,
+                        string | React.JSXElementConstructor<any>
+                      >
+                    | Iterable<React.ReactNode>
+                    | React.ReactPortal
+                    | Promise<React.AwaitedReactNode>
+                    | null
+                    | undefined;
+                }) => (
+                  <div
+                    key={tx.id}
+                    className="py-4 first:pt-0 last:pb-0 flex items-center justify-between hover:bg-neutral-50 px-0"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-neutral-900">
+                        {tx.description || `Transaction #${tx.id}`}
+                      </p>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {new Date(tx.date || tx.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="font-semibold text-neutral-900">
+                        {formatCurrency(tx.amount)}
+                      </p>
+                      <Badge variant="success">{tx.status}</Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <p className="font-semibold text-neutral-900">
-                      {formatCurrency(tx.amount)}
-                    </p>
-                    <Badge variant="success">{tx.status}</Badge>
-                  </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </CardBody>
         </Card>

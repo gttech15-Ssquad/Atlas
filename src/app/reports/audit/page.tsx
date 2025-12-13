@@ -6,41 +6,24 @@ import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Download, Eye } from "lucide-react";
-
-const mockAuditLogs = [
-  {
-    id: "1",
-    timestamp: "2025-11-29T14:30:00Z",
-    user: "John Doe",
-    action: "Card Creation Approved",
-    entity: "VirtualCard",
-    status: "success",
-  },
-  {
-    id: "2",
-    timestamp: "2025-11-29T13:15:00Z",
-    user: "Jane Smith",
-    action: "User Created",
-    entity: "User",
-    status: "success",
-  },
-  {
-    id: "3",
-    timestamp: "2025-11-29T12:45:00Z",
-    user: "System Admin",
-    action: "Card Limit Modified",
-    entity: "VirtualCard",
-    status: "success",
-  },
-];
+import { useAuditLogs } from "@/lib/hooks";
 
 export default function AuditTrailPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: logs = [], isLoading } = useAuditLogs();
 
-  const filtered = mockAuditLogs.filter(
+  if (isLoading) return <div>Loading audit logs...</div>;
+
+  const filtered = (logs as any[]).filter(
     (log) =>
-      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      log.user.toLowerCase().includes(searchTerm.toLowerCase())
+      (log.action ?? log.actionType ?? "")
+        .toString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (log.user ?? log.userEmail ?? "")
+        .toString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -53,8 +36,7 @@ export default function AuditTrailPage() {
           </p>
         </div>
         <Button variant="secondary">
-          <Download size={18} className="mr-2" />
-          Export CSV
+          <Download size={18} className="mr-2" /> Export CSV
         </Button>
       </div>
 
@@ -87,21 +69,18 @@ export default function AuditTrailPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="font-semibold text-neutral-900">
-                      {log.action}
+                      {log.action ?? log.actionType ?? log.title}
                     </p>
                     <p className="text-sm text-neutral-600">
-                      {log.user} • {log.entity}
+                      {log.user ?? log.userEmail ?? ""} •{" "}
+                      {log.resource ?? log.entity ?? ""}
                     </p>
                   </div>
                   <div className="flex gap-2 items-center">
                     <span
-                      className={`px-2 py-1 rounded text-xs font-medium ${
-                        log.status === "success"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
+                      className={`px-2 py-1 rounded text-xs font-medium ${log.status === "success" || log.status === "SUCCESS" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                     >
-                      {log.status.toUpperCase()}
+                      {(log.status ?? "").toString().toUpperCase()}
                     </span>
                     <Link href={`/reports/audit/${log.id}`}>
                       <Button variant="secondary" size="sm">
@@ -111,7 +90,9 @@ export default function AuditTrailPage() {
                   </div>
                 </div>
                 <p className="text-xs text-neutral-600 mt-2">
-                  {new Date(log.timestamp).toLocaleString()}
+                  {new Date(
+                    log.timestamp ?? log.createdAt ?? log.date
+                  ).toLocaleString()}
                 </p>
               </div>
             ))}

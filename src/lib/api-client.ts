@@ -1,12 +1,15 @@
 import axios, { AxiosInstance } from "axios";
 
+const baseUrl =
+  process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL;
+
 // Mock API client
 class APIClient {
-  private client: AxiosInstance;
+  public client: AxiosInstance;
 
   constructor() {
     this.client = axios.create({
-      baseURL: "/api",
+      baseURL: `${baseUrl}/api`,
       timeout: 10000,
       headers: {
         "Content-Type": "application/json",
@@ -79,6 +82,59 @@ class APIClient {
   // Transactions
   async getTransactions(filters?: any) {
     return this.client.get("/transactions", { params: filters });
+  }
+
+  // Account balance / dashboard
+  async getAccountSummary() {
+    return this.client.get("/accountbalance/summary");
+  }
+
+  async getAccountTransactions(params?: any) {
+    return this.client.get("/accountbalance/transactions", { params });
+  }
+
+  // Approvals / audit
+  async getApprovalHistoryForCard(cardId: string) {
+    return this.client.get(`/approvals/card/${cardId}/history`);
+  }
+
+  // Authentication
+  async login(email: string, password: string) {
+    return this.client.post(`/auth/login`, { email, password });
+  }
+
+  async getProfile() {
+    return this.client.get(`/auth/profile`);
+  }
+
+  async changePassword(oldPassword: string, newPassword: string) {
+    return this.client.post(`/auth/change-password`, {
+      oldPassword,
+      newPassword,
+    });
+  }
+
+  // Pending approvals
+  async getPendingApprovals() {
+    return this.client.get(`/approvals/pending`);
+  }
+
+  async approveApproval(approvalId: string, comment?: string) {
+    return this.client.put(`/approvals/${approvalId}/approve`, { comment });
+  }
+
+  async rejectApproval(approvalId: string, reason?: string) {
+    return this.client.put(`/approvals/${approvalId}/reject`, { reason });
+  }
+
+  // Organization members / users
+  async getOrganizationMembers(orgId: string) {
+    return this.client.get(`/organizations/${orgId}/members`);
+  }
+
+  // Audit logs
+  async getAuditLogs(params?: any) {
+    return this.client.get(`/audit`, { params });
   }
 
   // Accounts

@@ -39,7 +39,7 @@ export const NavbarTop = ({ onMenuClick }: { onMenuClick?: () => void }) => {
               className="h-10 w-auto flex-shrink-0"
             />
             <span className="font-bold text-lg text-neutral-900 hidden sm:inline">
-              GTBank <span className="text-primary">GAPS</span>
+              <span className="text-primary">GAPS</span>
             </span>
           </Link>
         </div>
@@ -64,7 +64,7 @@ export const NavbarTop = ({ onMenuClick }: { onMenuClick?: () => void }) => {
               )}
             >
               <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-primary font-semibold text-sm">
-                {user?.name.charAt(0)}
+                {user?.name?.charAt(0)}
               </div>
               <div className="text-left hidden md:block">
                 <p className="text-xs font-semibold text-neutral-900 truncate w-24">

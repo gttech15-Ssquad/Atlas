@@ -52,7 +52,7 @@ export default function LoginPage() {
       }
 
       // Mock 2FA verification
-      await login(email);
+      await login(email, password);
       router.push("/dashboard");
     } catch (err) {
       setError("2FA verification failed");
@@ -76,7 +76,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary mb-2">GTBank GAPS</h1>
+          <h1 className="text-3xl font-bold text-primary mb-2"> GAPS</h1>
           <p className="text-neutral-600">
             Corporate Account Management Platform
           </p>
@@ -164,7 +164,7 @@ export default function LoginPage() {
         )}
 
         {/* Demo credentials */}
-        <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4 shadow-sm">
+        {/* <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4 shadow-sm">
           <h3 className="font-semibold text-sm mb-3 text-neutral-900">
             Demo Credentials
           </h3>
@@ -185,7 +185,7 @@ export default function LoginPage() {
 
         <p className="text-xs text-center text-neutral-500">
           Use any demo credential to login. 2FA code can be any 6 digits.
-        </p>
+        </p> */}
       </div>
     </div>
   );

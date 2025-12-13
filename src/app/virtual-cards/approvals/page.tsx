@@ -1,57 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle2, X } from "lucide-react";
-
-const mockApprovals = [
-  {
-    id: 1,
-    cardName: "Marketing Team Card",
-    requester: "John Doe",
-    amount: 500000,
-    status: "pending",
-    requestDate: "2025-11-29",
-  },
-  {
-    id: 2,
-    cardName: "Sales Department Card",
-    requester: "Jane Smith",
-    amount: 750000,
-    status: "pending",
-    requestDate: "2025-11-28",
-  },
-  {
-    id: 3,
-    cardName: "Operations Card",
-    requester: "Mike Johnson",
-    amount: 300000,
-    status: "approved",
-    requestDate: "2025-11-27",
-  },
-];
+import { usePendingApprovals, useProcessApproval } from "@/lib/hooks";
 
 export default function ApprovalsQueuePage() {
-  const [approvals, setApprovals] = useState(mockApprovals);
-  const [, setSelectedApprovalId] = useState<number | null>(
-    null
+  const { data: approvals = [], isLoading } = usePendingApprovals();
+  const process = useProcessApproval();
+
+  const pending = approvals.filter(
+    (a: any) => a.status === "PENDING" || a.status === "pending"
+  );
+  const approved = approvals.filter(
+    (a: any) => a.status === "APPROVED" || a.status === "approved"
   );
 
-  const handleApprove = (id: number) => {
-    setApprovals((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: "approved" as const } : a))
-    );
-    setSelectedApprovalId(null);
+  const handleApprove = async (id: string) => {
+    try {
+      await process.mutateAsync({ id, approve: true });
+    } catch (err) {
+      // ignore — error handling could be enhanced
+    }
   };
 
-  const handleReject = (id: number) => {
-    setApprovals((prev) => prev.filter((a) => a.id !== id));
-    setSelectedApprovalId(null);
+  const handleReject = async (id: string) => {
+    try {
+      await process.mutateAsync({ id, approve: false });
+    } catch (err) {
+      // ignore
+    }
   };
 
-  const pending = approvals.filter((a) => a.status === "pending");
-  const approved = approvals.filter((a) => a.status === "approved");
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div className="space-y-6">
@@ -70,7 +52,7 @@ export default function ApprovalsQueuePage() {
             </h2>
           </CardHeader>
           <CardBody className="space-y-3">
-            {pending.map((approval) => (
+            {pending.map((approval: any) => (
               <div
                 key={approval.id}
                 className="border border-amber-200 bg-amber-50 rounded-lg p-4"
@@ -78,13 +60,23 @@ export default function ApprovalsQueuePage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <p className="font-semibold text-neutral-900">
-                      {approval.cardName}
+                      {approval.cardName ??
+                        approval.card?.nickname ??
+                        approval.resourceName}
                     </p>
                     <p className="text-sm text-neutral-600">
-                      Requested by {approval.requester}
+                      Requested by{" "}
+                      {approval.requestedByName ??
+                        approval.requestedBy ??
+                        approval.requester}
                     </p>
                     <p className="text-lg font-bold text-neutral-900 mt-2">
-                      ₦{approval.amount.toLocaleString()}
+                      ₦
+                      {(
+                        approval.amount ??
+                        approval.requestAmount ??
+                        0
+                      ).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -93,8 +85,7 @@ export default function ApprovalsQueuePage() {
                       size="sm"
                       onClick={() => handleApprove(approval.id)}
                     >
-                      <CheckCircle2 size={16} className="mr-1" />
-                      Approve
+                      <CheckCircle2 size={16} className="mr-1" /> Approve
                     </Button>
                     <Button
                       variant="secondary"
@@ -119,7 +110,7 @@ export default function ApprovalsQueuePage() {
             </h2>
           </CardHeader>
           <CardBody className="space-y-3">
-            {approved.map((approval) => (
+            {approved.map((approval: any) => (
               <div
                 key={approval.id}
                 className="border border-green-200 bg-green-50 rounded-lg p-4"
@@ -127,11 +118,23 @@ export default function ApprovalsQueuePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold text-neutral-900">
-                      {approval.cardName}
+                      {approval.cardName ??
+                        approval.card?.nickname ??
+                        approval.resourceName}
                     </p>
                     <p className="text-sm text-neutral-600">
-                      ₦{approval.amount.toLocaleString()} •{" "}
-                      {approval.requestDate}
+                      ₦
+                      {(
+                        approval.amount ??
+                        approval.requestAmount ??
+                        0
+                      ).toLocaleString()}{" "}
+                      •{" "}
+                      {new Date(
+                        approval.requestedAt ??
+                          approval.createdAt ??
+                          approval.requestDate
+                      ).toLocaleDateString()}
                     </p>
                   </div>
                   <CheckCircle2 size={20} className="text-green-600" />

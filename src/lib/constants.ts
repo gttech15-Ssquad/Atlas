@@ -19,36 +19,31 @@ export const SIDEBAR_ITEMS = [
     href: "/transactions",
     icon: "ArrowRightLeft",
   },
+  // {
+  //   id: "payments",
+  //   label: "Payments",
+  //   href: "/payments",
+  //   icon: "Send",
+  // },
   {
-    id: "payments",
-    label: "Payments",
-    href: "/payments",
-    icon: "Send",
-  },
-  {
-    id: "cards",
-    label: "Cards",
-    href: "#",
+    id: "virtual-cards",
+    label: "Virtual Cards",
+    href: "/virtual-cards",
     icon: "CreditCard",
-    submenu: [
-      {
-        id: "virtual-cards",
-        label: "Virtual Cards",
-        href: "/virtual-cards",
-      },
-      {
-        id: "physical-cards",
-        label: "Physical Cards",
-        href: "/physical-cards",
-      },
-    ],
+    // submenu: [
+    //   {
+    //     id: "virtual-cards",
+    //     label: "Virtual Cards",
+    //     href: "/virtual-cards",
+    //   },
+    //   {
+    //     id: "physical-cards",
+    //     label: "Physical Cards",
+    //     href: "/physical-cards",
+    //   },
+    // ],
   },
-  {
-    id: "cheques",
-    label: "Cheque Services",
-    href: "/cheques",
-    icon: "FileText",
-  },
+
   {
     id: "users",
     label: "User & Role Management",
@@ -61,32 +56,13 @@ export const SIDEBAR_ITEMS = [
     href: "/audit",
     icon: "ClipboardList",
   },
-  {
-    id: "trade",
-    label: "International Trade",
-    href: "/trade",
-    icon: "Globe",
-  },
-  {
-    id: "loans",
-    label: "Loans & Investments",
-    href: "/loans",
-    icon: "TrendingUp",
-  },
 
-  {
-    id: "subscriptions",
-    label: "Subscription Manager",
-    href: "/subscriptions",
-    icon: "Package",
-  },
-
-  {
-    id: "settings",
-    label: "Settings",
-    href: "/settings",
-    icon: "Settings",
-  },
+  // {
+  //   id: "settings",
+  //   label: "Settings",
+  //   href: "/settings",
+  //   icon: "Settings",
+  // },
 ];
 
 // GTBank Branding

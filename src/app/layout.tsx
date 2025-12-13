@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { NavbarTop } from "@/components/layout/NavbarTop";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { QueryClientProvider } from "@/components/providers/QueryClientProvider";
+import { Toaster } from "react-hot-toast";
 
 export default function RootLayout({
   children,
@@ -53,6 +54,16 @@ export default function RootLayout({
               </div>
             </div>
           )}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: "#333",
+                color: "#fff",
+              },
+            }}
+          />
         </QueryClientProvider>
       </body>
     </html>

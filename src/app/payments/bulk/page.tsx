@@ -29,7 +29,7 @@ export default function BulkPaymentsPage() {
     amount: 0,
     narration: "",
   });
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   const mockBanks = [
     { code: "011", name: "First Bank" },
@@ -76,10 +76,12 @@ export default function BulkPaymentsPage() {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setStep("submitted");
-    setLoading(false);
+    // Bulk payments are not yet supported by the backend in this integration.
+    // Disable submission to avoid broken flows.
+    alert(
+      "Bulk payment submission is disabled — backend integration not available."
+    );
+    return;
   };
 
   const getBankName = (code: string) => {
@@ -187,14 +189,10 @@ export default function BulkPaymentsPage() {
                 <h2 className="text-lg font-semibold text-neutral-900">
                   Payment Details
                 </h2>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setShowModal(true)}
-                >
-                  <Plus size={14} className="mr-2" />
-                  Add More
-                </Button>
+                <div className="text-sm text-neutral-600">
+                  Bulk payments submission is disabled — backend integration not
+                  available.
+                </div>
               </div>
             </CardHeader>
             <CardBody>

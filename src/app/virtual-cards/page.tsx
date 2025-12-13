@@ -25,11 +25,11 @@ export default function VirtualCardsPage() {
   const filteredCards = useMemo(() => {
     return cards.filter((card: any) => {
       const matchesSearch =
-        card.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.maskedNumber.includes(searchTerm);
-      const matchesStatus = !filterStatus || card.status === filterStatus;
+        card?.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card?.cardNumber.includes(searchTerm);
+      const matchesStatus = !filterStatus || card?.status === filterStatus;
       const matchesDepartment =
-        !filterDepartment || card.department === filterDepartment;
+        !filterDepartment || card?.department === filterDepartment;
       return matchesSearch && matchesStatus && matchesDepartment;
     });
   }, [cards, searchTerm, filterStatus, filterDepartment]);
@@ -37,18 +37,20 @@ export default function VirtualCardsPage() {
   const departments = [...new Set(cards.map((c: any) => c.department))];
 
   const tableRows = filteredCards.map((card: any) => [
-    card.nickname,
-    card.maskedNumber,
-    card.department,
-    formatCurrency(card.currentSpend) + " / " + formatCurrency(card.softLimit),
+    card?.nickname,
+    card?.cardNumber,
+    card?.department,
+    formatCurrency(card?.currentSpend) +
+      " / " +
+      formatCurrency(card?.softLimit),
     <Badge
-      key={card.id}
-      variant={card.status === "active" ? "success" : "warning"}
+      key={card?.id}
+      variant={card?.status === "active" ? "success" : "warning"}
     >
-      {CARD_STATUS_LABELS[card.status] || card.status}
+      {CARD_STATUS_LABELS[card?.status] || card?.status}
     </Badge>,
-    <div key={card.id} className="flex gap-2">
-      <Link href={`/virtual-cards/${card.id}`}>
+    <div key={card?.id} className="flex gap-2">
+      <Link href={`/virtual-cards/${card?.id}`}>
         <Button variant="ghost" size="sm">
           <Eye size={16} />
         </Button>
@@ -57,7 +59,9 @@ export default function VirtualCardsPage() {
         variant="ghost"
         size="sm"
         onClick={() =>
-          card.status === "active" ? freezeCard(card.id) : unfreezeCard(card.id)
+          card?.status === "active"
+            ? freezeCard(card?.id)
+            : unfreezeCard(card?.id)
         }
       >
         <Lock size={16} />
@@ -66,7 +70,7 @@ export default function VirtualCardsPage() {
         variant="ghost"
         size="sm"
         className="text-error"
-        onClick={() => deleteCard(card.id)}
+        onClick={() => deleteCard(card?.id)}
       >
         <Trash2 size={16} />
       </Button>
@@ -112,7 +116,7 @@ export default function VirtualCardsPage() {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               options={[
-                { value: "active", label: "Active" },
+                { value: "Active", label: "Active" },
                 { value: "inactive", label: "Inactive" },
                 { value: "frozen", label: "Frozen" },
               ]}

@@ -6,65 +6,73 @@ import { Table } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Plus, Lock, Trash2 } from "lucide-react";
-
-const mockUsers = [
-  {
-    id: "1",
-    name: "Chukwu Obi",
-    email: "chukwu.obi@gtbank.com",
-    role: "CEO",
-    department: "Executive",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Adeyemi Okoro",
-    email: "adeyemi.okoro@gtbank.com",
-    role: "CFO",
-    department: "Finance",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Zainab Hassan",
-    email: "zainab.hassan@gtbank.com",
-    role: "Admin",
-    department: "Operations",
-    status: "active",
-  },
-];
+import { useAuthStore } from "@/store/authStore";
+import { useOrganizationMembers } from "@/lib/hooks";
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const orgId =
+    useAuthStore((s) => s.organizationId) ??
+    (typeof localStorage !== "undefined"
+      ? localStorage.getItem("organization_id")
+      : null);
+  const { data: members = [], isLoading } = useOrganizationMembers(
+    orgId ?? undefined
+  );
 
-  const rows = mockUsers.map((user) => [
-    <span key="name" className="text-sm font-medium text-neutral-900">
-      {user.name}
-    </span>,
-    <span key="email" className="text-sm text-neutral-600">
-      {user.email}
-    </span>,
-    <span key="role" className="text-sm text-neutral-900">
-      {user.role}
-    </span>,
-    <span key="dept" className="text-sm text-neutral-600">
-      {user.department}
-    </span>,
-    <span
-      key="status"
-      className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700"
-    >
-      {user.status}
-    </span>,
-    <div key="actions" className="flex gap-2">
-      <Button variant="outline" size="sm">
-        <Lock size={16} />
-      </Button>
-      <Button variant="danger" size="sm">
-        <Trash2 size={16} />
-      </Button>
-    </div>,
-  ]);
+  const filtered = (members as any[])
+    .filter((m) => {
+      const name =
+        (m.userFirstName ?? m.user?.firstName ?? m.userName ?? "") +
+        " " +
+        (m.userLastName ?? m.user?.lastName ?? "");
+      return (
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (m.userEmail ?? m.user?.email ?? "")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+      );
+    })
+    .slice(0, 200);
+
+  if (isLoading) return <div>Loading users...</div>;
+
+  const rows = filtered.map((m) => {
+    const name =
+      `${m.userFirstName ?? m.user?.firstName ?? ""} ${m.userLastName ?? m.user?.lastName ?? ""}`.trim();
+    const email = m.userEmail ?? m.user?.email ?? "";
+    const role = m.orgRole ?? m.user?.role ?? "";
+    const dept = m.user?.department ?? "";
+    const status = m.status ?? "";
+    return [
+      <span key="name" className="text-sm font-medium text-neutral-900">
+        {name || email}
+      </span>,
+      <span key="email" className="text-sm text-neutral-600">
+        {email}
+      </span>,
+      <span key="role" className="text-sm text-neutral-900">
+        {role}
+      </span>,
+      <span key="dept" className="text-sm text-neutral-600">
+        {dept}
+      </span>,
+      <span
+        key="status"
+        className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700"
+      >
+        {status}
+      </span>,
+      <div key="actions" className="flex gap-2">
+        <Button variant="outline" size="sm">
+          <Lock size={16} />
+        </Button>
+        <Button variant="danger" size="sm">
+          <Trash2 size={16} />
+        </Button>
+      </div>,
+    ];
+  });
 
   return (
     <div className="space-y-6">
@@ -76,8 +84,7 @@ export default function UsersPage() {
           </p>
         </div>
         <Button variant="primary">
-          <Plus size={16} className="mr-2" />
-          Add User
+          <Plus size={16} className="mr-2" /> Add User
         </Button>
       </div>
 
@@ -97,7 +104,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-neutral-900">
-            All Users ({mockUsers.length})
+            All Users ({members.length})
           </h2>
         </CardHeader>
         <CardBody>

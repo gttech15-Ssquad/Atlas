@@ -49,7 +49,7 @@ export const Progress = ({
       </div>
       {showLabel && (
         <div className="text-xs text-neutral-600 text-right">
-          {value.toLocaleString()} / {max.toLocaleString()}
+          {value?.toLocaleString()} / {max?.toLocaleString()}
         </div>
       )}
     </div>

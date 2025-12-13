@@ -3,34 +3,33 @@
 import React from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
-
-const mockAccounts = [
-  {
-    accountNumber: "20501234567",
-    accountType: "Business",
-    balance: 5000000,
-    currency: "NGN",
-  },
-  {
-    accountNumber: "20509876543",
-    accountType: "Domiciliary (USD)",
-    balance: 150000,
-    currency: "USD",
-  },
-];
+import { useAccounts } from "@/lib/hooks";
 
 export default function AccountsPage() {
-  const formatCurrency = (amount: number, currency: string) => {
+  const { data: accounts = [], isLoading } = useAccounts();
+
+  const formatCurrency = (amount: number, currency: string = "NGN") => {
     const symbol = currency === "USD" ? "$" : "₦";
     return `${symbol}${amount.toLocaleString()}`;
   };
 
-  const rows = mockAccounts.map((account) => [
+  const rows = (Array.isArray(accounts) ? accounts : []).map((account: any) => [
     <span key="num" className="font-medium font-mono">
-      {account.accountNumber}
+      {account.accountNumber || account.AccountNumber || "-"}
     </span>,
-    <span key="type">{account.accountType}</span>,
-    <span key="bal">{formatCurrency(account.balance, account.currency)}</span>,
+    <span key="type">
+      {account.accountType || account.AccountType || "Business"}
+    </span>,
+    <span key="bal">
+      {formatCurrency(
+        account.balance ||
+          account.Balance ||
+          account.availableBalance ||
+          account.AvailableBalance ||
+          0,
+        account.currency || account.Currency || "NGN"
+      )}
+    </span>,
   ]);
 
   return (
@@ -49,7 +48,20 @@ export default function AccountsPage() {
           </h2>
         </CardHeader>
         <CardBody>
-          <Table headers={["Account Number", "Type", "Balance"]} rows={rows} />
+          {isLoading ? (
+            <p className="text-center py-8 text-neutral-600">
+              Loading accounts...
+            </p>
+          ) : accounts.length === 0 ? (
+            <p className="text-center py-8 text-neutral-600">
+              No accounts found
+            </p>
+          ) : (
+            <Table
+              headers={["Account Number", "Type", "Balance"]}
+              rows={rows}
+            />
+          )}
         </CardBody>
       </Card>
     </div>

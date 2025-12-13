@@ -3,57 +3,30 @@
 import React from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
-
-const mockTransactions = [
-  {
-    date: "2025-01-15",
-    description: "Card Payment - Zenith Bank",
-    amount: 150000,
-    type: "outgoing",
-  },
-  {
-    date: "2025-01-14",
-    description: "Salary Deposit",
-    amount: 5000000,
-    type: "incoming",
-  },
-  {
-    date: "2025-01-13",
-    description: "Transfer",
-    amount: 50000,
-    type: "outgoing",
-  },
-  {
-    date: "2025-01-12",
-    description: "Card Purchase - Online",
-    amount: 25000,
-    type: "outgoing",
-  },
-  {
-    date: "2025-01-11",
-    description: "Refund - Returned Items",
-    amount: 75000,
-    type: "incoming",
-  },
-];
+import { useTransactions } from "@/lib/hooks";
 
 export default function TransactionsPage() {
-  const rows = mockTransactions.map((tx) => [
+  const { data: transactions = [], isLoading } = useTransactions();
+
+  if (isLoading) return <div>Loading transactions...</div>;
+
+  const rows = (transactions as any[]).map((tx) => [
     <span key="date" className="text-sm text-neutral-600">
-      {tx.date}
+      {new Date(tx.date ?? tx.createdAt ?? tx.timestamp).toLocaleDateString()}
     </span>,
     <span key="desc" className="text-neutral-900">
-      {tx.description}
+      {tx.description ?? tx.merchant ?? tx.narration}
     </span>,
     <span
       key="amt"
       className={
-        tx.type === "incoming"
+        tx.type === "incoming" || tx.status === "CREDIT"
           ? "text-green-600 font-medium"
           : "text-red-600 font-medium"
       }
     >
-      {tx.type === "incoming" ? "+" : "-"}₦{tx.amount.toLocaleString()}
+      {tx.type === "incoming" || tx.status === "CREDIT" ? "+" : "-"}₦
+      {Math.abs(tx.amount ?? tx.value ?? 0).toLocaleString()}
     </span>,
   ]);
 
