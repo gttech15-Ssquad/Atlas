@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { NavbarTop } from "@/components/layout/NavbarTop";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { QueryClientProvider } from "@/components/providers/QueryClientProvider";
+import { NotificationContainer } from "@/components/NotificationContainer";
 
 export default function RootLayout({
   children,
@@ -53,6 +54,7 @@ export default function RootLayout({
               </div>
             </div>
           )}
+          <NotificationContainer />
         </QueryClientProvider>
       </body>
     </html>

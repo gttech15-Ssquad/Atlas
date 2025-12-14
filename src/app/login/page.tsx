@@ -3,15 +3,19 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { useRBACStore } from "@/store/rbacStore";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "@/components/ui/Alert";
+import { authValidation } from "@/lib/authValidation";
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
+  const { loginUser } = useRBACStore();
+  const [organizationId, setOrganizationId] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("password");
+  const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"login" | "2fa">("login");
   const [error, setError] = useState("");
@@ -23,14 +27,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Mock login flow
-      if (!email.includes("@")) {
-        setError("Please enter a valid email");
+      // Validate credentials against demo users
+      const validation = authValidation.validateCredentials(email, password);
+
+      if (!validation.valid) {
+        setError(validation.message);
         setLoading(false);
         return;
       }
 
-      // Move to 2FA step
+      // Credentials are valid, move to 2FA step
       setStep("2fa");
       setLoading(false);
     } catch (err) {
@@ -51,25 +57,18 @@ export default function LoginPage() {
         return;
       }
 
-      // Mock 2FA verification
+      // Login with RBAC store
+      loginUser(email);
+
+      // Also call authStore login for backward compatibility
       await login(email);
+
+      // Redirect to dashboard
       router.push("/dashboard");
     } catch (err) {
       setError("2FA verification failed");
       setLoading(false);
     }
-  };
-
-  const presetCredentials = [
-    { role: "CEO", email: "ceo@gtbank.com", password: "password" },
-    { role: "CFO", email: "cfo@gtbank.com", password: "password" },
-    { role: "Admin", email: "admin@gtbank.com", password: "password" },
-  ];
-
-  const handlePresetLogin = async (preset: (typeof presetCredentials)[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setStep("2fa");
   };
 
   return (
@@ -90,6 +89,15 @@ export default function LoginPage() {
             className="space-y-4 bg-white p-6 rounded-lg border border-neutral-200 shadow-sm mb-6"
           >
             <h2 className="text-xl font-bold text-neutral-900 mb-4">Login</h2>
+
+            <Input
+              label="Organization ID"
+              type="text"
+              placeholder="Enter your organization ID"
+              value={organizationId}
+              onChange={(e) => setOrganizationId(e.target.value)}
+              required
+            />
 
             <Input
               label="Email"
@@ -162,30 +170,6 @@ export default function LoginPage() {
             </Button>
           </form>
         )}
-
-        {/* Demo credentials */}
-        <div className="bg-white border border-neutral-200 rounded-lg p-4 mb-4 shadow-sm">
-          <h3 className="font-semibold text-sm mb-3 text-neutral-900">
-            Demo Credentials
-          </h3>
-          <div className="space-y-2">
-            {presetCredentials.map((preset) => (
-              <button
-                key={preset.email}
-                type="button"
-                onClick={() => handlePresetLogin(preset)}
-                className="w-full px-3 py-2 text-sm bg-neutral-50 hover:bg-primary/10 border border-neutral-200 rounded transition text-left"
-              >
-                <div className="font-medium text-primary">{preset.role}</div>
-                <div className="text-xs text-neutral-600">{preset.email}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-xs text-center text-neutral-500">
-          Use any demo credential to login. 2FA code can be any 6 digits.
-        </p>
       </div>
     </div>
   );
