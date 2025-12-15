@@ -9,7 +9,6 @@ import { useUserManagementStore } from "@/stores/userManagementStore";
 import { Card, CardHeader, CardBody, SummaryCard } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Alert } from "@/components/ui/Alert";
 import { SpendingChart } from "@/components/charts/SpendingChart";
 import {
   CreditCard,
