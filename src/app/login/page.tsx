@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useRBACStore } from "@/store/rbacStore";
 import { authValidation } from "@/lib/authValidation";
 import { Alert } from "@/components/ui/Alert";
-import { Eye, EyeOff, Shield, Check, Globe } from "lucide-react";
+import { Eye, EyeOff, Check, Globe } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
