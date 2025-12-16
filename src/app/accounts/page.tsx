@@ -7,15 +7,10 @@ import { Table } from "@/components/ui/Table";
 const mockAccounts = [
   {
     accountNumber: "20501234567",
-    accountType: "Business",
+    accountName: "Dangote Cement PLC",
+    accountType: "Current Account",
     balance: 5000000,
     currency: "NGN",
-  },
-  {
-    accountNumber: "20509876543",
-    accountType: "Domiciliary (USD)",
-    balance: 150000,
-    currency: "USD",
   },
 ];
 
@@ -29,6 +24,7 @@ export default function AccountsPage() {
     <span key="num" className="font-medium font-mono">
       {account.accountNumber}
     </span>,
+    <span key="name">{account.accountName}</span>,
     <span key="type">{account.accountType}</span>,
     <span key="bal">{formatCurrency(account.balance, account.currency)}</span>,
   ]);
@@ -49,7 +45,10 @@ export default function AccountsPage() {
           </h2>
         </CardHeader>
         <CardBody>
-          <Table headers={["Account Number", "Type", "Balance"]} rows={rows} />
+          <Table
+            headers={["Account Number", "Account Name", "Type", "Balance"]}
+            rows={rows}
+          />
         </CardBody>
       </Card>
     </div>

@@ -20,12 +20,6 @@ export const SIDEBAR_ITEMS = [
     icon: "ArrowRightLeft",
   },
   {
-    id: "payments",
-    label: "Payments",
-    href: "/payments",
-    icon: "Send",
-  },
-  {
     id: "cards",
     label: "Cards",
     href: "#",
@@ -43,12 +37,7 @@ export const SIDEBAR_ITEMS = [
       },
     ],
   },
-  {
-    id: "cheques",
-    label: "Cheque Services",
-    href: "/cheques",
-    icon: "FileText",
-  },
+
   {
     id: "users",
     label: "User & Role Management",
@@ -61,25 +50,7 @@ export const SIDEBAR_ITEMS = [
     href: "/audit",
     icon: "ClipboardList",
   },
-  {
-    id: "trade",
-    label: "International Trade",
-    href: "/trade",
-    icon: "Globe",
-  },
-  {
-    id: "loans",
-    label: "Loans & Investments",
-    href: "/loans",
-    icon: "TrendingUp",
-  },
 
-  {
-    id: "subscriptions",
-    label: "Subscription Manager",
-    href: "/subscriptions",
-    icon: "Package",
-  },
 
   {
     id: "settings",

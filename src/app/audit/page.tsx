@@ -1,41 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Table } from "@/components/ui/Table";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { Download } from "lucide-react";
-
-const mockAuditLogs = [
-  {
-    id: "1",
-    timestamp: new Date().toISOString(),
-    user: "Chukwu Obi",
-    action: "Card Created",
-    entity: "Virtual Card",
-    status: "success",
-  },
-  {
-    id: "2",
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    user: "Chukwu Obi",
-    action: "Card Approved",
-    entity: "Virtual Card",
-    status: "success",
-  },
-  {
-    id: "3",
-    timestamp: new Date(Date.now() - 172800000).toISOString(),
-    user: "Admin User",
-    action: "Spending Limit Changed",
-    entity: "Virtual Card",
-    status: "success",
-  },
-];
+import { useAuditStore } from "@/stores/auditStore";
 
 export default function AuditPage() {
+  const allLogs = useAuditStore((state) => state.getAllLogs());
   const [filters, setFilters] = useState({
     action: "",
     status: "",
@@ -43,12 +18,43 @@ export default function AuditPage() {
     endDate: "",
   });
 
-  const rows = mockAuditLogs.map((log) => [
+  // Filter and search logs
+  const filteredLogs = useMemo(() => {
+    let logs = allLogs;
+
+    if (filters.action) {
+      logs = logs.filter((log) =>
+        log.action.toLowerCase().includes(filters.action.toLowerCase())
+      );
+    }
+
+    if (filters.status) {
+      logs = logs.filter((log) => log.status === filters.status);
+    }
+
+    if (filters.startDate) {
+      logs = logs.filter(
+        (log) =>
+          new Date(log.timestamp) >= new Date(filters.startDate + "T00:00:00")
+      );
+    }
+
+    if (filters.endDate) {
+      logs = logs.filter(
+        (log) =>
+          new Date(log.timestamp) <= new Date(filters.endDate + "T23:59:59")
+      );
+    }
+
+    return logs;
+  }, [allLogs, filters]);
+
+  const rows = filteredLogs.map((log) => [
     <span key="ts" className="text-xs text-neutral-500">
       {new Date(log.timestamp).toLocaleString()}
     </span>,
     <span key="user" className="text-sm text-neutral-900">
-      {log.user}
+      {log.userName}
     </span>,
     <span key="action" className="text-sm text-neutral-900">
       {log.action}
@@ -135,7 +141,7 @@ export default function AuditPage() {
       <Card>
         <CardHeader>
           <h2 className="text-lg font-semibold text-neutral-900">
-            Activity Log
+            Activity Log ({filteredLogs.length} entries)
           </h2>
         </CardHeader>
         <CardBody>

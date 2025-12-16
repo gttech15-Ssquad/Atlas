@@ -16,6 +16,8 @@ interface MultiSignatoryModalProps {
   cardNickname?: string;
   action?: string;
   isLoading?: boolean;
+  warningMessage?: string;
+  suggestion?: string;
 }
 
 export const MultiSignatoryModal = ({
@@ -25,6 +27,8 @@ export const MultiSignatoryModal = ({
   cardNickname = "Virtual Card",
   action = "Create Virtual Card",
   isLoading = false,
+  warningMessage,
+  suggestion,
 }: MultiSignatoryModalProps) => {
   const [ceoOTP, setCeoOTP] = useState("");
   const [cfoOTP, setCfoOTP] = useState("");
@@ -68,6 +72,18 @@ export const MultiSignatoryModal = ({
           </p>
         </div>
 
+        {/* Warning Message */}
+        {warningMessage && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-900 font-medium">{warningMessage}</p>
+            {suggestion && (
+              <p className="text-xs text-red-700 mt-2">
+                <strong>Alternative:</strong> {suggestion}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Approval Status */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-neutral-900">
@@ -94,7 +110,7 @@ export const MultiSignatoryModal = ({
                 </div>
                 <div>
                   <p className="font-semibold text-neutral-900">CEO Approval</p>
-                  <p className="text-xs text-neutral-500">Chukwu Obi</p>
+                  <p className="text-xs text-neutral-500">Aliko Dangote</p>
                 </div>
               </div>
               <Badge variant={ceoApproved ? "success" : "warning"}>

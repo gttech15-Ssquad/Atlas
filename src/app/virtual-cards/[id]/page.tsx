@@ -93,7 +93,7 @@ export default function CardDetailsPage() {
         <CardPreview
           cardNumber={card.cardNumber}
           expiryDate={card.expiryDate}
-          cvv={card.cvv}
+          cvv={card.cvv || "000"}
           cardholderName="CORPORATE CARD"
           department={card.department}
           showCVV={showCVV}

@@ -1,30 +1,34 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Alert } from "@/components/ui/Alert";
-import { CardPreview } from "@/components/cards/CardPreview";
 import { MultiSignatoryModal } from "@/components/modals/MultiSignatoryModal";
+import { PermissionDeniedModal } from "@/components/modals/PermissionDeniedModal";
 import { useCardStore } from "@/store/cardStore";
-import { DEPARTMENTS, MERCHANT_CATEGORIES } from "@/lib/constants";
+import { useRBACStore } from "@/store/rbacStore";
+import { useApprovalsStore } from "@/store/approvalsStore";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useCanPerformAction } from "@/hooks/useCanPerformAction";
+import { DEPARTMENTS } from "@/lib/constants";
 import {
   generateCardNumber,
   generateCVV,
   generateExpiryDate,
 } from "@/lib/utils";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Lock } from "lucide-react";
 import Link from "next/link";
+import { auditLogger } from "@/lib/auditLogger";
 
 interface FormData {
   nickname: string;
   department: string;
   softLimit: string;
   hardLimit: string;
-  merchantCategories: string[];
   internationalTransactions: boolean;
 }
 
@@ -40,24 +44,31 @@ interface FormErrors {
 export default function CreateCardPage() {
   const router = useRouter();
   const { addCard } = useCardStore();
+  const { currentUser } = useRBACStore();
+  const { createApproval } = useApprovalsStore();
+  const { addNotification } = useNotificationStore();
+  const { canPerformCardAction } = useCanPerformAction();
+
   const [formData, setFormData] = useState<FormData>({
     nickname: "",
     department: "",
     softLimit: "",
     hardLimit: "",
-    merchantCategories: [],
     internationalTransactions: false,
   });
 
-  const [cardPreview, setCardPreview] = useState({
-    cardNumber: generateCardNumber(),
-    cvv: generateCVV(),
-    expiryDate: generateExpiryDate(),
-  });
-
   const [showMultiSig, setShowMultiSig] = useState(false);
-  const [showCVV, setShowCVV] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showPermissionDenied, setShowPermissionDenied] = useState(false);
+  const [showApprovalSent, setShowApprovalSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check permission on mount
+  useEffect(() => {
+    if (canPerformCardAction("CREATE_CARD") === "denied" && currentUser) {
+      setShowPermissionDenied(true);
+    }
+  }, [canPerformCardAction, currentUser]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -86,11 +97,6 @@ export default function CreateCardPage() {
       newErrors.softLimit = "Soft limit cannot exceed hard limit";
     }
 
-    if (formData.merchantCategories.length === 0) {
-      newErrors.merchantCategories =
-        "At least one merchant category must be selected";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -106,27 +112,72 @@ export default function CreateCardPage() {
     }));
   };
 
-  const handleMerchantToggle = (category: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      merchantCategories: prev.merchantCategories.includes(category)
-        ? prev.merchantCategories.filter((m) => m !== category)
-        : [...prev.merchantCategories, category],
-    }));
-  };
-
-  const handleRegenerateCard = () => {
-    setCardPreview({
-      cardNumber: generateCardNumber(),
-      cvv: generateCVV(),
-      expiryDate: generateExpiryDate(),
-    });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      setShowMultiSig(true);
+      const actionType = canPerformCardAction("CREATE_CARD");
+
+      if (actionType === "denied") {
+        setShowPermissionDenied(true);
+      } else if (actionType === "approval") {
+        // Send for approval
+        handleSendForApproval();
+      } else {
+        // APPROVER - proceed to multi-signatory
+        setShowMultiSig(true);
+      }
+    }
+  };
+
+  const handleSendForApproval = async () => {
+    if (!currentUser) return;
+
+    setIsSubmitting(true);
+
+    try {
+      // Create approval request
+      const approvalId = createApproval({
+        type: "CREATE_CARD",
+        initiatorEmail: currentUser.email,
+        initiatorName: currentUser.name,
+        cardDetails: {
+          ...formData,
+          cardNumber: generateCardNumber(),
+          cvv: generateCVV(),
+          expiryDate: generateExpiryDate(),
+        },
+        status: "PENDING",
+      });
+
+      auditLogger.logApprovalRequested(
+        approvalId,
+        "CREATE_CARD",
+        formData.nickname
+      );
+
+      // Show notification
+      addNotification({
+        type: "info",
+        title: "Approval Sent",
+        message:
+          "Your card creation request has been sent to Approver for approval",
+        duration: 5000,
+      });
+
+      setShowApprovalSent(true);
+
+      // Redirect after delay
+      setTimeout(() => {
+        router.push("/virtual-cards");
+      }, 2000);
+    } catch (error) {
+      addNotification({
+        type: "error",
+        title: "Error",
+        message: "Failed to send approval request",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -134,29 +185,88 @@ export default function CreateCardPage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
+    // Generate new card details
+    const generatedCardNumber = generateCardNumber();
+
     // Create new card with approval
+    const newCardId = `card-${Date.now()}`;
     addCard({
-      id: `card-${Date.now()}`,
+      id: newCardId,
       nickname: formData.nickname,
-      cardNumber: cardPreview.cardNumber,
-      maskedNumber: `${cardPreview.cardNumber.slice(0, 4)}-****-****-${cardPreview.cardNumber.slice(-4)}`,
-      expiryDate: cardPreview.expiryDate,
-      cvv: cardPreview.cvv,
+      cardNumber: generatedCardNumber,
+      maskedNumber: `${generatedCardNumber.slice(0, 4)} **** **** ****`,
+      expiryDate: generateExpiryDate(),
+      cvv: generateCVV(),
       department: formData.department,
       softLimit: Number(formData.softLimit),
       hardLimit: Number(formData.hardLimit),
       currentSpend: 0,
-      merchantCategories: formData.merchantCategories,
+      merchantCategories: [],
       internationalTransactions: formData.internationalTransactions,
       status: "active",
       createdAt: new Date().toISOString(),
-      createdBy: "Current User",
-      approvedBy: { ceo: true, cfo: true },
+      createdBy: currentUser?.name || "Current User",
+      approvedBy: { approver: true },
+    });
+
+    auditLogger.logCardCreated(
+      newCardId,
+      formData.nickname,
+      formData.department
+    );
+
+    addNotification({
+      type: "success",
+      title: "Card Created",
+      message: "Virtual card has been created successfully",
     });
 
     setShowMultiSig(false);
+
+    // Give localStorage persist middleware time to write before navigating
+    await new Promise((resolve) => setTimeout(resolve, 100));
     router.push("/virtual-cards");
   };
+
+  if (canPerformCardAction("CREATE_CARD") === "denied") {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Link href="/virtual-cards">
+            <Button variant="outline" size="sm">
+              <ArrowLeft size={16} />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900">
+              Create Virtual Card
+            </h1>
+          </div>
+        </div>
+
+        <div className="max-w-md mx-auto py-12 text-center">
+          <Lock size={48} className="mx-auto text-neutral-300 mb-4" />
+          <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-neutral-600 mb-6">
+            You do not have permission to create virtual cards. Only Approvers
+            can perform this action.
+          </p>
+          <Link href="/virtual-cards">
+            <Button variant="primary">Back to Cards</Button>
+          </Link>
+        </div>
+
+        <PermissionDeniedModal
+          isOpen={showPermissionDenied}
+          onClose={() => setShowPermissionDenied(false)}
+          message="Only users with APPROVER role can create virtual cards. Administrators can submit requests for approval."
+          requiredRole="APPROVER"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -179,16 +289,26 @@ export default function CreateCardPage() {
       </div>
 
       {/* Alert */}
-      <Alert
-        type="info"
-        title="Multi-Signatory Required"
-        message="Card creation requires CEO and CFO approval with OTP verification"
-      />
+      {currentUser?.role === "ADMINISTRATOR" && (
+        <Alert
+          type="info"
+          title="Approval Required"
+          message="Your card creation will be sent to an Approver for approval after you submit the form"
+        />
+      )}
+
+      {currentUser?.role === "APPROVER" && (
+        <Alert
+          type="info"
+          title="Immediate Card Creation"
+          message="As an Approver, you can create cards immediately after OTP verification"
+        />
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Form */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <Card>
             <CardHeader>
               <h2 className="text-lg font-semibold text-neutral-900">
@@ -262,36 +382,7 @@ export default function CreateCardPage() {
                 </div>
 
                 {/* Merchant Categories */}
-                <div>
-                  <h3 className="text-sm font-semibold text-neutral-900 mb-4">
-                    Allowed Merchant Categories
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {MERCHANT_CATEGORIES.map((category) => (
-                      <label
-                        key={category}
-                        className="flex items-center gap-2 p-2 rounded border border-neutral-200 hover:border-orange-500 cursor-pointer transition"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={formData.merchantCategories.includes(
-                            category
-                          )}
-                          onChange={() => handleMerchantToggle(category)}
-                          className="rounded"
-                        />
-                        <span className="text-sm text-neutral-700">
-                          {category}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  {errors.merchantCategories && (
-                    <p className="text-xs text-red-500 mt-2">
-                      {errors.merchantCategories}
-                    </p>
-                  )}
-                </div>
+                {/* Removed - no longer needed */}
 
                 {/* International Transactions */}
                 <div>
@@ -319,108 +410,19 @@ export default function CreateCardPage() {
 
                 {/* Submit Button */}
                 <div className="pt-4 border-t border-neutral-200">
-                  <Button type="submit" variant="primary" className="w-full">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
                     <Check size={16} className="mr-2" />
-                    Proceed to Multi-Signatory Approval
+                    {currentUser?.role === "APPROVER"
+                      ? "Proceed to Multi-Signatory Approval"
+                      : "Send for Approval"}
                   </Button>
                 </div>
               </form>
-            </CardBody>
-          </Card>
-        </div>
-
-        {/* Card Preview */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-neutral-900">
-                Card Preview
-              </h3>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <CardPreview
-                cardNumber={cardPreview.cardNumber}
-                expiryDate={cardPreview.expiryDate}
-                cvv={cardPreview.cvv}
-                cardholderName="CORPORATE CARD"
-                department={formData.department || "CORPORATE"}
-                showCVV={showCVV}
-                onShowCVV={setShowCVV}
-              />
-
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleRegenerateCard}
-              >
-                Regenerate Card Details
-              </Button>
-            </CardBody>
-          </Card>
-
-          {/* Summary */}
-          <Card>
-            <CardHeader>
-              <h3 className="text-lg font-semibold text-neutral-900">
-                Summary
-              </h3>
-            </CardHeader>
-            <CardBody className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Nickname:</span>
-                <span className="font-medium text-neutral-900">
-                  {formData.nickname || "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Department:</span>
-                <span className="font-medium text-neutral-900">
-                  {formData.department || "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Soft Limit:</span>
-                <span className="font-medium text-neutral-900">
-                  {formData.softLimit
-                    ? `₦${Number(formData.softLimit).toLocaleString()}`
-                    : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Hard Limit:</span>
-                <span className="font-medium text-neutral-900">
-                  {formData.hardLimit
-                    ? `₦${Number(formData.hardLimit).toLocaleString()}`
-                    : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-neutral-600">Int'l Transactions:</span>
-                <span className="font-medium text-neutral-900">
-                  {formData.internationalTransactions
-                    ? "✓ Allowed"
-                    : "✗ Blocked"}
-                </span>
-              </div>
-              <div className="border-t border-neutral-200 pt-3">
-                <span className="text-neutral-600">Categories:</span>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {formData.merchantCategories.length > 0 ? (
-                    formData.merchantCategories.map((cat) => (
-                      <span
-                        key={cat}
-                        className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded"
-                      >
-                        {cat}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-neutral-500 text-xs">
-                      None selected
-                    </span>
-                  )}
-                </div>
-              </div>
             </CardBody>
           </Card>
         </div>
@@ -432,7 +434,39 @@ export default function CreateCardPage() {
         onClose={() => setShowMultiSig(false)}
         onApprove={handleMultiSigApprove}
         cardNickname={formData.nickname}
-        action="CREATE_CARD"
+        action={`Create New Virtual Card - ${formData.department || "Corporate"}`}
+      />
+
+      {/* Approval Sent Modal */}
+      {showApprovalSent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="max-w-md w-full mx-4">
+            <CardBody className="text-center py-12">
+              <Check size={48} className="mx-auto text-green-600 mb-4" />
+              <h2 className="text-xl font-semibold text-neutral-900 mb-2">
+                Request Sent for Approval
+              </h2>
+              <p className="text-neutral-600 mb-2">
+                Your card creation request has been submitted to an Approver
+              </p>
+              <p className="text-sm text-neutral-500">
+                You will receive a notification once the request is approved or
+                rejected
+              </p>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {/* Permission Denied Modal */}
+      <PermissionDeniedModal
+        isOpen={showPermissionDenied}
+        onClose={() => {
+          setShowPermissionDenied(false);
+          router.push("/virtual-cards");
+        }}
+        message="You do not have permission to create virtual cards. Contact your Administrator or Approver."
+        requiredRole="APPROVER"
       />
     </div>
   );

@@ -31,12 +31,56 @@ export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+/**
+ * Luhn Algorithm - validates and generates valid credit card numbers
+ */
+function luhnChecksum(num: string): number {
+  let sum = 0;
+  let isEven = false;
+  for (let i = num.length - 1; i >= 0; i--) {
+    let digit = parseInt(num.charAt(i), 10);
+    if (isEven) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+    sum += digit;
+    isEven = !isEven;
+  }
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * Generate a valid Mastercard number using Luhn algorithm
+ * Mastercard BIN ranges: 51-55, 2221-2720
+ */
 export function generateCardNumber(): string {
-  const prefix = "4929"; // Visa prefix
-  const randomPart = Array.from({ length: 12 }, () =>
-    Math.floor(Math.random() * 10)
-  ).join("");
-  return prefix + randomPart;
+  // Mastercard prefix (using 51-55 range)
+  const mastercardPrefixes = ["51", "52", "53", "54", "55"];
+  const prefix =
+    mastercardPrefixes[Math.floor(Math.random() * mastercardPrefixes.length)];
+
+  // Generate 14 random digits (total 16 digits for Mastercard)
+  let cardNumber = prefix;
+  for (let i = 0; i < 14; i++) {
+    cardNumber += Math.floor(Math.random() * 10);
+  }
+
+  // Calculate the Luhn checksum digit
+  const checksum = luhnChecksum(cardNumber);
+  cardNumber += checksum;
+
+  // Format as spaced groups (e.g., "5234 1234 5678 9010")
+  return (
+    cardNumber.slice(0, 4) +
+    " " +
+    cardNumber.slice(4, 8) +
+    " " +
+    cardNumber.slice(8, 12) +
+    " " +
+    cardNumber.slice(12, 16)
+  );
 }
 
 export function generateCVV(): string {
